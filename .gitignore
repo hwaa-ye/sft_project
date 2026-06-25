@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.idea/
+.DS_Store
+*.pyc
+output/
+data/tokenized/
+data/raw.jsonl
+data/train.jsonl
+data/firefly_raw/
