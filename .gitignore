@@ -8,3 +8,4 @@ data/tokenized/
 data/raw.jsonl
 data/train.jsonl
 data/firefly_raw/
+data/train_math*.jsonl
