@@ -27,7 +27,7 @@ if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
 MAX_LENGTH = int(os.environ.get("SFT_MAX_LENGTH", "2048"))  # 推理链需要更长
-DATA_PATH = os.environ.get("SFT_TRAIN_JSONL", "data/train_math.jsonl")
+DATA_PATH = os.environ.get("SFT_TRAIN_JSONL", "data/train_math_all.jsonl")
 tokenized_dir = os.environ.get("SFT_TOKENIZED_DIR", "data/tokenized")
 
 # ─── 2. 格式化函数 ───

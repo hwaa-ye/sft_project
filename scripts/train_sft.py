@@ -12,6 +12,13 @@ from transformers import get_linear_schedule_with_warmup
 # ─── 环境优化 ───
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
+# ─── ModelScope 缓存：优先用 autodl-fs 持久化目录 ───
+if "MODELSCOPE_CACHE" not in os.environ:
+    _persist = os.path.join(os.path.expanduser("~"), "autodl-fs", "model_cache")
+    _cache_dir = _persist if os.path.isdir(_persist) else os.path.join(os.path.expanduser("~"), ".cache", "modelscope")
+    os.environ.setdefault("MODELSCOPE_CACHE", _cache_dir)
+    os.environ.setdefault("MODELSCOPE_CREDENTIALS_PATH", os.path.join(_cache_dir, "credentials"))
+
 # ─── 配置 ───
 MODEL_NAME = os.environ.get("SFT_MODEL_NAME", "Qwen/Qwen3-8B")
 BATCH_SIZE = int(os.environ.get("SFT_BATCH_SIZE", "1"))
