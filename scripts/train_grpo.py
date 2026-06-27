@@ -32,7 +32,7 @@ LR = float(os.environ.get("GRPO_LR", "5e-5"))
 CLIP_EPS = float(os.environ.get("GRPO_CLIP", "0.2"))
 KL_BETA = float(os.environ.get("GRPO_KL_BETA", "0.04"))
 MAX_STEPS = int(os.environ.get("GRPO_MAX_STEPS", "500"))
-MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "3072"))
+MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "2048"))
 GEN_MAX_NEW = int(os.environ.get("GRPO_GEN_MAX_NEW", "2048"))
 GEN_TEMP = float(os.environ.get("GRPO_TEMP", "0.8"))
 
@@ -152,7 +152,7 @@ def main():
         indices = np.random.choice(len(all_data), PROMPTS_PER_STEP, replace=False)
         batch_data = [all_data[i] for i in indices]
 
-        # ─── 1. Rollout：为每个 prompt 生成 N 个回答 ───
+        # ─── 1. Rollout：为每个 prompt 生成 N 个回答（分批生成，控制显存） ───
         prompts = []
         for item in batch_data:
             p = f"<|im_start|>user\n{item['instruction']}<|im_end|>\n<|im_start|>assistant\n"
@@ -160,26 +160,38 @@ def main():
                 prompts.append(p)
 
         model.eval()
-        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
 
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs, max_new_tokens=GEN_MAX_NEW, temperature=GEN_TEMP,
-                do_sample=True, pad_token_id=pad_token_id, eos_token_id=tokenizer.eos_token_id,
-            )
+        # 分批生成：每次生成一个 prompt 的 N 个回答
+        all_responses = []
+        all_rewards = []
+        for p_idx in range(PROMPTS_PER_STEP):
+            start = p_idx * RESPONSES_PER_PROMPT
+            end = start + RESPONSES_PER_PROMPT
+            batch_prompts = prompts[start:end]
+            batch_items_text = batch_data[p_idx:p_idx+1] * RESPONSES_PER_PROMPT
 
-        # 解析生成的回答
-        responses = []
-        rewards_list = []
-        for b_idx, (item, out_ids) in enumerate(zip(
-            [d for d in batch_data for _ in range(RESPONSES_PER_PROMPT)], outputs
-        )):
-            prompt_len = (inputs.attention_mask[b_idx] == 1).sum().item()
-            response = tokenizer.decode(out_ids[prompt_len:], skip_special_tokens=True)
-            responses.append(response)
+            inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to(device)
 
-            reward_info = compute_reward(response, str(item["answer"]))
-            rewards_list.append(reward_info)
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs, max_new_tokens=GEN_MAX_NEW, temperature=GEN_TEMP,
+                    do_sample=True, pad_token_id=pad_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                )
+
+            for b_idx, (item, out_ids) in enumerate(zip(batch_items_text, outputs)):
+                prompt_len = (inputs.attention_mask[b_idx] == 1).sum().item()
+                response = tokenizer.decode(out_ids[prompt_len:], skip_special_tokens=True)
+                all_responses.append(response)
+                reward_info = compute_reward(response, str(item["answer"]))
+                all_rewards.append(reward_info)
+
+        responses = all_responses
+        rewards_list = all_rewards
+
+        # 清释放生成缓存
+        del outputs, inputs
+        torch.cuda.empty_cache()
 
         # 重整为 [PROMPTS_PER_STEP, RESPONSES_PER_PROMPT]
         rewards_tensor = torch.tensor(
