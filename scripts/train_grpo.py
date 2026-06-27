@@ -210,14 +210,14 @@ def main():
 
         # 重整为 [PROMPTS_PER_STEP, RESPONSES_PER_PROMPT]
         rewards_tensor = torch.tensor(
-            [r["total"] for r in rewards_list], dtype=torch.float32
+            [r["total"] for r in rewards_list], dtype=torch.float32, device=device
         ).view(PROMPTS_PER_STEP, RESPONSES_PER_PROMPT)
 
         # ─── 2. 计算 advantage（组内归一化） ───
         mean_r = rewards_tensor.mean(dim=1, keepdim=True)
         std_r = rewards_tensor.std(dim=1, keepdim=True) + 1e-8
         advantages = (rewards_tensor - mean_r) / std_r
-        advantages = advantages.view(-1)  # flatten back
+        advantages = advantages.view(-1).to(device)  # flatten + to GPU
 
         # ─── 3. 构造训练 batch：prompt + response 拼接 ───
         full_texts = [
