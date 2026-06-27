@@ -5,11 +5,13 @@ GRPO 训练脚本：基于 SFT 模型，用组内相对优势做强化学习微�
 import os, sys, gc, torch, json, pickle, re, copy
 # 确保 scripts 目录在 path 中（AutoDL 上从项目根目录运行）
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# bitsandbytes 装到了数据盘，不在默认 path 里
+sys.path.insert(0, "/root/autodl-tmp/pip_pkgs")
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.optim import AdamW
-from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from grpo_reward import compute_reward, extract_answer, check_answer
 
@@ -118,8 +120,9 @@ def main():
     torch.cuda.empty_cache()
 
     print("\n加载 base 模型（8-bit 量化省显存）...")
+    bnb_config = BitsAndBytesConfig(load_in_8bit=True)
     model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, load_in_8bit=True, device_map="auto",
+        BASE_MODEL, quantization_config=bnb_config, device_map="auto",
         trust_remote_code=True, local_files_only=True,
     )
     if hasattr(model, "config") and hasattr(model.config, "use_cache"):
