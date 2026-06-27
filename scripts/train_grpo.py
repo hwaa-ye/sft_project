@@ -5,8 +5,6 @@ GRPO 训练脚本：基于 SFT 模型，用组内相对优势做强化学习微�
 import os, sys, gc, torch, json, pickle, re, copy
 # 确保 scripts 目录在 path 中（AutoDL 上从项目根目录运行）
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# bitsandbytes 装到了数据盘，不在默认 path 里
-sys.path.insert(0, "/root/autodl-tmp/pip_pkgs")
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
