@@ -176,6 +176,8 @@ def main():
 
         model.eval()
         model.config.use_cache = True  # 生成时开启 KV cache
+        if hasattr(model, "gradient_checkpointing_disable"):
+            model.gradient_checkpointing_disable()  # checkpoint 与 cache 互斥
 
         # 分批生成：每次生成一个 prompt 的 N 个回答
         all_responses = []
@@ -205,8 +207,10 @@ def main():
         responses = all_responses
         rewards_list = all_rewards
 
-        # 清释放生成缓存，关闭 KV cache 准备训练
+        # 清释放生成缓存，关闭 KV cache，重开 gradient checkpoint
         model.config.use_cache = False
+        if hasattr(model, "gradient_checkpointing_enable"):
+            model.gradient_checkpointing_enable()
         torch.cuda.empty_cache()
         gc.collect()
         print(f"  [step {step+1}] 生成完成, 计算 reward...", flush=True)
