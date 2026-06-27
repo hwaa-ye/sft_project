@@ -47,8 +47,10 @@ with open(TEST_PATH, encoding="utf-8") as f:
             test_data.append(json.loads(line))
 print(f"测试数据: {len(test_data)} 条")
 
-# 批量推理
-results = []
+# 批量推理（增量写入，防丢结果）
+os.makedirs(os.path.dirname(OUTPUT_PATH) or ".", exist_ok=True)
+out_f = open(OUTPUT_PATH, "w", encoding="utf-8")
+
 for i, item in enumerate(test_data):
     prompt = f"<|im_start|>user\n{item['instruction']}<|im_end|>\n<|im_start|>assistant\n"
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
@@ -65,14 +67,11 @@ for i, item in enumerate(test_data):
 
     generated = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
     item["prediction"] = generated
-    results.append(item)
+    out_f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    out_f.flush()
 
-    if (i + 1) % 50 == 0:
-        print(f"  {i+1}/{len(test_data)} 完成")
+    if (i + 1) % 20 == 0:
+        print(f"  {i+1}/{len(test_data)} 完成", flush=True)
 
-os.makedirs(os.path.dirname(OUTPUT_PATH) or ".", exist_ok=True)
-with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-    for item in results:
-        f.write(json.dumps(item, ensure_ascii=False) + "\n")
-
-print(f"推理完成: {len(results)} 条 -> {OUTPUT_PATH}")
+out_f.close()
+print(f"推理完成: {len(test_data)} 条 -> {OUTPUT_PATH}")
