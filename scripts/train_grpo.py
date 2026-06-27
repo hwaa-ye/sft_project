@@ -32,7 +32,7 @@ LR = float(os.environ.get("GRPO_LR", "5e-5"))
 CLIP_EPS = float(os.environ.get("GRPO_CLIP", "0.2"))
 KL_BETA = float(os.environ.get("GRPO_KL_BETA", "0.04"))
 MAX_STEPS = int(os.environ.get("GRPO_MAX_STEPS", "500"))
-MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "2048"))
+MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "1536"))
 GEN_MAX_NEW = int(os.environ.get("GRPO_GEN_MAX_NEW", "2048"))
 GEN_TEMP = float(os.environ.get("GRPO_TEMP", "0.8"))
 
@@ -68,18 +68,26 @@ print(f"训练数据: {len(all_data)} 条（有答案）")
 
 # ─── 辅助函数：log probability 计算（逐条处理，避免 logits 爆显存） ───
 def _seq_logprob(model, input_ids_row, attn_mask_row, resp_mask_row):
-    """计算单条序列的 response log probability"""
+    """计算单条序列的 response log probability（纯 bf16，避免 loss 函数 float 转换 OOM）"""
     labels = input_ids_row.clone()
     labels[~resp_mask_row] = -100
     with torch.amp.autocast("cuda", dtype=amp_dtype):
         out = model(input_ids=input_ids_row.unsqueeze(0),
-                    attention_mask=attn_mask_row.unsqueeze(0),
-                    labels=labels.unsqueeze(0))
-    # loss = -mean(log_prob) over response tokens
-    n_tokens = resp_mask_row.sum().item()
-    if n_tokens == 0:
+                    attention_mask=attn_mask_row.unsqueeze(0))
+    # 手动在 bf16 下算 CE loss，避免 logits.float() 爆显存
+    logits = out.logits  # [1, seq, vocab] in bf16
+    shift_logits = logits[:, :-1, :].squeeze(0)  # [seq-1, vocab]
+    shift_labels = input_ids_row[1:]  # [seq-1]
+    ce = nn.functional.cross_entropy(shift_logits, shift_labels, reduction="none")
+    # 只取 response 部分的 loss
+    resp_shift = resp_mask_row[1:]
+    if resp_shift.sum() == 0:
         return torch.tensor(0.0, device=device)
-    return -out.loss * n_tokens  # total log probability
+    masked_ce = ce * resp_shift.float()
+    total_ce = masked_ce.sum()
+    n_tokens = resp_shift.sum().float()
+    avg_ce = total_ce / n_tokens
+    return -avg_ce * n_tokens  # total log probability
 
 
 def compute_all_logprobs(model, input_ids, attention_mask, response_mask):
@@ -126,12 +134,18 @@ def main():
     sft_lora_state = get_lora_state(model)
     print(f"  SFT reference 权重已保存 ({len(sft_lora_state)} 个参数)")
 
-    # 训练模式：LoRA 参数可训练
+    # 训练模式：LoRA 参数可训练，base 冻结
     for name, param in model.named_parameters():
         if "lora_" in name:
             param.requires_grad = True
         else:
             param.requires_grad = False
+
+    # 开启梯度检查点，节省训练显存
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
 
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
@@ -190,8 +204,9 @@ def main():
         rewards_list = all_rewards
 
         # 清释放生成缓存
-        del outputs, inputs
+        del outputs, all_responses, all_rewards
         torch.cuda.empty_cache()
+        gc.collect()
 
         # 重整为 [PROMPTS_PER_STEP, RESPONSES_PER_PROMPT]
         rewards_tensor = torch.tensor(
