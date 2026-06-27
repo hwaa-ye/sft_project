@@ -261,31 +261,32 @@ def main():
                 model, input_ids, attention_mask, response_mask
             )  # [B]
 
-        # ─── 6. PPO 更新（同一批数据多次更新） ───
+        # ─── 6. PPO 更新（逐条 backward，释放中间激活） ───
+        B = input_ids.size(0)
+        ppo_loss_val = 0.0
         for ppo_epoch in range(PPO_EPOCHS):
             model.train()
             optimizer.zero_grad(set_to_none=True)
 
-            # 计算当前 policy log probs（with grad）
-            pol_logprobs = compute_all_logprobs(
-                model, input_ids, attention_mask, response_mask
-            )  # [B]
+            epoch_loss = 0.0
+            for i in range(B):
+                # 单条 log prob（with grad）
+                pol_lp = _seq_logprob(
+                    model, input_ids[i], attention_mask[i], response_mask[i]
+                )  # scalar
 
-            # PPO ratio
-            ratio = torch.exp(pol_logprobs - old_logprobs)
+                # PPO loss（单条）
+                ratio_i = torch.exp(pol_lp - old_logprobs[i])
+                loss_clip_i = -torch.min(
+                    ratio_i * advantages[i],
+                    torch.clamp(ratio_i, 1 - CLIP_EPS, 1 + CLIP_EPS) * advantages[i],
+                )
+                kl_i = ref_logprobs[i] - pol_lp
+                loss_i = (loss_clip_i + KL_BETA * kl_i) / (B * GRAD_ACCUM)
+                loss_i.backward()  # 立即释放本条计算图
+                epoch_loss += loss_i.item()
 
-            # PPO clipped loss
-            loss_clip = -torch.min(
-                ratio * advantages,
-                torch.clamp(ratio, 1 - CLIP_EPS, 1 + CLIP_EPS) * advantages,
-            ).mean()
-
-            # KL penalty: ref_logprobs - pol_logprobs
-            kl = (ref_logprobs - pol_logprobs).mean()
-
-            loss = loss_clip + KL_BETA * kl
-            loss = loss / GRAD_ACCUM
-            loss.backward()
+            ppo_loss_val = epoch_loss
 
             if (ppo_epoch + 1) % GRAD_ACCUM == 0:
                 nn.utils.clip_grad_norm_(opt_params, 1.0)
@@ -297,10 +298,11 @@ def main():
             avg_r = rewards_tensor.mean().item()
             acc = sum(r["accuracy"] for r in rewards_list) / len(rewards_list)
             comp = sum(r["completeness"] for r in rewards_list) / len(rewards_list)
+            # KL 近似（用第一次 PPO epoch 的值）
             print(
                 f"  step {step:4d}/{MAX_STEPS} | "
                 f"reward {avg_r:.3f} | acc {acc:.2f} | comp {comp:.2f} | "
-                f"kl {kl.item():.4f} | lr {scheduler.get_last_lr()[0]:.2e}",
+                f"loss {ppo_loss_val:.4f} | lr {scheduler.get_last_lr()[0]:.2e}",
                 flush=True,
             )
 
