@@ -23,16 +23,45 @@ def extract_answer(text: str) -> str | None:
 
 # ─── 2. 答案比对 ───
 def normalize_answer(ans: str) -> str:
-    """数学答案标准化：去空格、统一符号"""
-    ans = ans.strip().lower()
+    """数学答案标准化"""
+    ans = str(ans).strip().lower()
+    # 去 LaTeX 包装: \text{xxx} → xxx, \boxed{xxx} → xxx
+    ans = re.sub(r"\\text\{(.*?)\}", r"\1", ans)
+    ans = re.sub(r"\\boxed\{(.*?)\}", r"\1", ans)
+    ans = re.sub(r"\\mathrm\{(.*?)\}", r"\1", ans)
+    # 中文批改符号: × / ✓ → 错误 / 正确
+    ans = ans.replace("×", "错误").replace("✗", "错误").replace("✓", "正确").replace("√", "正确")
+    # 去空格、引号
     ans = re.sub(r"\s+", "", ans)
-    ans = ans.replace(" ", "").replace(",", "")
+    ans = ans.strip('"\'""\'\'$')
     return ans
+
+
+def extract_number(s: str) -> float | None:
+    """从字符串提取数值，用于数值比较"""
+    s = re.sub(r"\s+", "", str(s))
+    # 简单数字（含小数点、负号）
+    m = re.match(r"-?[\d,]+\.?\d*", s)
+    if m:
+        try:
+            return float(m.group().replace(",", ""))
+        except ValueError:
+            pass
+    return None
 
 
 def check_correct(pred: str, gold: str) -> bool:
     """比较预测答案与标准答案"""
-    return normalize_answer(pred) == normalize_answer(gold)
+    p = normalize_answer(pred)
+    g = normalize_answer(gold)
+    if p == g:
+        return True
+    # 数值比较
+    pn = extract_number(p)
+    gn = extract_number(g)
+    if pn is not None and gn is not None and abs(pn - gn) < 1e-6:
+        return True
+    return False
 
 
 # ─── 3. 推理完整性（简单版：检查 think 段落是否有足够步骤） ───
