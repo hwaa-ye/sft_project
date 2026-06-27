@@ -117,9 +117,9 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    print("\n加载 base 模型...")
+    print("\n加载 base 模型（8-bit 量化省显存）...")
     model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, torch_dtype=amp_dtype, device_map=None,
+        BASE_MODEL, load_in_8bit=True, device_map="auto",
         trust_remote_code=True, local_files_only=True,
     )
     if hasattr(model, "config") and hasattr(model.config, "use_cache"):
@@ -141,11 +141,7 @@ def main():
         else:
             param.requires_grad = False
 
-    # 开启梯度检查点，节省训练显存
-    if hasattr(model, "gradient_checkpointing_enable"):
-        model.gradient_checkpointing_enable()
-    if hasattr(model, "enable_input_require_grads"):
-        model.enable_input_require_grads()
+    # 8-bit 量化不需要 gradient checkpointing（base 冻结，无梯度）
 
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
@@ -176,8 +172,6 @@ def main():
 
         model.eval()
         model.config.use_cache = True  # 生成时开启 KV cache
-        if hasattr(model, "gradient_checkpointing_disable"):
-            model.gradient_checkpointing_disable()  # checkpoint 与 cache 互斥
 
         # 分批生成：每次生成一个 prompt 的 N 个回答
         all_responses = []
@@ -207,10 +201,8 @@ def main():
         responses = all_responses
         rewards_list = all_rewards
 
-        # 清释放生成缓存，关闭 KV cache，重开 gradient checkpoint
+        # 清释放生成缓存，关闭 KV cache
         model.config.use_cache = False
-        if hasattr(model, "gradient_checkpointing_enable"):
-            model.gradient_checkpointing_enable()
         torch.cuda.empty_cache()
         gc.collect()
         print(f"  [step {step+1}] 生成完成, 计算 reward...", flush=True)
