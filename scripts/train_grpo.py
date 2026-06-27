@@ -174,6 +174,7 @@ def main():
                 prompts.append(p)
 
         model.eval()
+        model.config.use_cache = True  # 生成时开启 KV cache
 
         # 分批生成：每次生成一个 prompt 的 N 个回答
         all_responses = []
@@ -203,7 +204,8 @@ def main():
         responses = all_responses
         rewards_list = all_rewards
 
-        # 清释放生成缓存
+        # 清释放生成缓存，关闭 KV cache 准备训练
+        model.config.use_cache = False
         del outputs, all_responses, all_rewards
         torch.cuda.empty_cache()
         gc.collect()
