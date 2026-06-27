@@ -20,7 +20,10 @@ if "MODELSCOPE_CACHE" not in os.environ:
     os.environ.setdefault("MODELSCOPE_CREDENTIALS_PATH", os.path.join(_cache_dir, "credentials"))
 
 # ─── 配置 ───
-MODEL_NAME = os.environ.get("SFT_MODEL_NAME", "Qwen/Qwen3-8B")
+MODEL_NAME = os.environ.get("SFT_MODEL_NAME")
+if not MODEL_NAME:
+    _local = os.path.join(os.path.expanduser("~"), "autodl-fs", "model_cache", "Qwen", "Qwen3-8B")
+    MODEL_NAME = _local if os.path.isdir(_local) else "Qwen/Qwen3-8B"
 BATCH_SIZE = int(os.environ.get("SFT_BATCH_SIZE", "1"))
 GRAD_ACCUM = int(os.environ.get("SFT_GRAD_ACCUM", "8"))
 LR = float(os.environ.get("SFT_LR", "2e-4"))
@@ -149,15 +152,19 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    from modelscope import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import LoraConfig, get_peft_model
 
     print(f"设备: {device}")
     print(f"可用显存: {torch.cuda.get_device_properties(0).total_memory/1024**3:.1f}GB")
 
+    # 强制离线模式，禁止联网
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
     # 加载 tokenizer
     print("加载 tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True, local_files_only=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     global pad_token_id
@@ -173,6 +180,7 @@ def main():
         torch_dtype=amp_dtype if use_amp else torch.float32,
         device_map=None,
         trust_remote_code=True,
+        local_files_only=True,
     )
     if hasattr(model, "config") and hasattr(model.config, "use_cache"):
         model.config.use_cache = False

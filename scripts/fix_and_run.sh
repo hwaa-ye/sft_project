@@ -23,11 +23,11 @@ echo "=== 4. 启动训练 ==="
 cd /root/autodl-tmp/sft_project
 mkdir -p output
 
-SFT_MODEL_NAME=${SFT_MODEL_NAME:-Qwen/Qwen3-8B} \
 SFT_MAX_LENGTH=${SFT_MAX_LENGTH:-2048} \
 SFT_BATCH_SIZE=${SFT_BATCH_SIZE:-1} \
 SFT_GRAD_ACCUM=${SFT_GRAD_ACCUM:-8} \
 SFT_GRAD_CHECKPOINT=${SFT_GRAD_CHECKPOINT:-1} \
+TRANSFORMERS_OFFLINE=1 HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1 \
 nohup python3 scripts/train_sft.py > output/train_sft.log 2>&1 &
 PID=$!
 echo "训练 PID: $PID"
