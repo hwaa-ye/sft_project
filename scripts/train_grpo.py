@@ -165,6 +165,7 @@ def main():
         # 采样 prompt
         indices = np.random.choice(len(all_data), PROMPTS_PER_STEP, replace=False)
         batch_data = [all_data[i] for i in indices]
+        print(f"  [step {step+1}] 采样完成, 开始生成...", flush=True)
 
         # ─── 1. Rollout：为每个 prompt 生成 N 个回答（分批生成，控制显存） ───
         prompts = []
@@ -206,9 +207,9 @@ def main():
 
         # 清释放生成缓存，关闭 KV cache 准备训练
         model.config.use_cache = False
-        del outputs, all_responses, all_rewards
         torch.cuda.empty_cache()
         gc.collect()
+        print(f"  [step {step+1}] 生成完成, 计算 reward...", flush=True)
 
         # 重整为 [PROMPTS_PER_STEP, RESPONSES_PER_PROMPT]
         rewards_tensor = torch.tensor(
@@ -243,6 +244,8 @@ def main():
         # 对齐 padding
         response_mask = response_mask & (attention_mask == 1)
 
+        print(f"  [step {step+1}] reward done, 计算 ref logprobs...", flush=True)
+
         # ─── 4. 计算 reference log probs ───
         current_lora = get_lora_state(model)
         set_lora_state(model, sft_lora_state)
@@ -255,6 +258,7 @@ def main():
 
         # 恢复 policy 权重
         set_lora_state(model, current_lora)
+        print(f"  [step {step+1}] ref done, 计算 old logprobs...", flush=True)
 
         # ─── 5. 计算 old_logprobs（policy 更新前的概率，no_grad） ───
         model.eval()
