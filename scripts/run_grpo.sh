@@ -25,7 +25,7 @@ GRPO_RESPONSES=4 \
 GRPO_KL_BETA=0.04 \
 GRPO_CLIP=0.2 \
 GRPO_LR=5e-5 \
-GRPO_MAX_STEPS=500 \
+GRPO_MAX_STEPS=150 \
 PYTHONUNBUFFERED=1 \
 nohup /root/miniconda3/bin/python3 scripts/train_grpo.py > output/train_grpo.log 2>&1 &
 
