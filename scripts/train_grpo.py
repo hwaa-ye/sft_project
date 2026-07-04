@@ -35,6 +35,10 @@ MAX_STEPS = int(os.environ.get("GRPO_MAX_STEPS", "500"))
 MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "1536"))
 GEN_MAX_NEW = int(os.environ.get("GRPO_GEN_MAX_NEW", "2048"))
 GEN_TEMP = float(os.environ.get("GRPO_TEMP", "0.8"))
+# reward 权重（可通过环境变量覆盖，用于 ablation）
+REWARD_W_ACC = float(os.environ.get("GRPO_RW_ACC", "0.7"))
+REWARD_W_COMP = float(os.environ.get("GRPO_RW_COMP", "0.2"))
+REWARD_W_EFF = float(os.environ.get("GRPO_RW_EFF", "0.1"))
 
 device = torch.device("cuda:0")
 torch.cuda.empty_cache()
@@ -196,7 +200,8 @@ def main():
                 prompt_len = (inputs.attention_mask[b_idx] == 1).sum().item()
                 response = tokenizer.decode(out_ids[prompt_len:], skip_special_tokens=True)
                 all_responses.append(response)
-                reward_info = compute_reward(response, str(item["answer"]))
+                reward_info = compute_reward(response, str(item["answer"]),
+                    w_accuracy=REWARD_W_ACC, w_completeness=REWARD_W_COMP, w_efficiency=REWARD_W_EFF)
                 all_rewards.append(reward_info)
 
         responses = all_responses

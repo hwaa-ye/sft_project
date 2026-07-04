@@ -74,3 +74,48 @@
 - [ ] 准备 GRPO 八股：policy gradient、advantage、KL 散度、PPO vs GRPO
 - [ ] 面试题：Self-Attention 推导
 
+---
+
+## 2026-06-28（周六）
+
+### 今日计划
+- [x] GRPO 训练启动（MAX_STEPS=200, ~43h, 预计 6/30 早上完成）
+- [x] 项目全流程复盘 Part 1-2（数据管线 + SFT 训练）
+- [ ] 项目全流程复盘 Part 3-6（评估/ Badcase/ GRPO/ 踩坑）
+- [ ] 模拟面试问答训练
+
+### 收获
+- **GRPO 训练成功启动**：8-bit 量化 base + LoRA 可训练，8.9GB/32GB 显存，200 步 ~43h
+- **完成了数据管线完整回顾**：两大数据源（MathR 4K + R1 Distill 36K）、答案清洗的4步优先级、ChatML 格式化 + think/answer 标签设计、labels masking 原理
+- **完成了 SFT 训练完整回顾**：LoRA 选型的三层理由（参数效率/低秩假设/灾难性遗忘）、H800 OOM 排查的三板斧、每个参数的决策链路
+- **开始模拟面试训练**：面试官视角的提问方式（问分析框架而非标准答案、问边界条件、问 trade-off、问工程决策）
+
+### 明天要做
+- [ ] 继续 Part 3-6 复盘
+- [ ] 回答当前 5 个面试题
+- [ ] 检查 GRPO 训练进度
+- [ ] 面试题：Self-Attention 推导
+
+---
+
+## 2026-07-01（周二）
+
+### 今日计划
+- [x] GRPO eval 完成 + 四组对比报告
+- [x] Part 3 评估体系复盘
+- [x] Part 4 Badcase 分析与 Reward 设计复盘
+- [x] Part 3-4 模拟面试（17 道题）
+
+### 收获
+- **GRPO eval 结果出炉**：GRPO_200 最佳（acc 82.23%, +4.13%），截断率 -5.58%，completeness +7.02%。GRPO_300 出现 reward hacking
+- **Badcase→Reward 因果链**：截断 16.94%→completeness 0.2 / 计算错误→accuracy 0.7 / 跳步→efficiency 0.1
+- **分清了 RLHF vs GRPO vs PRM 关系**：GRPO 用组内 advantage 替代 value model，PRM 替换 reward 函数而非 GRPO 框架
+- **面试叙事框架**：发现问题→诊断→方案→验证→局限→下一步，诚实承认局限比完美答案更打动人
+- **定下项目 2 方向**：PRM/LLM-as-Judge 做步骤级 reward
+
+### 明天要做
+- [ ] Part 5 GRPO 细节复盘
+- [ ] Part 6 工程踩坑复盘
+- [ ] Part 5-6 模拟面试
+- [ ] 整体项目叙事逐字稿
+
