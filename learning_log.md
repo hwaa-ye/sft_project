@@ -119,3 +119,61 @@
 - [ ] Part 5-6 模拟面试
 - [ ] 整体项目叙事逐字稿
 
+---
+
+## 2026-07-03（周四）
+
+### 今日计划
+- [x] 简历三项目方案确定（GRPO+PRM / Feida-Agent / Self-Correction RL）
+- [x] 简历制作完成（docx 格式，保留原始样式）
+- [x] 项目2 PRM 全部代码编写（7个脚本）
+- [x] PRM 理论基础学习（ORM vs PRM、三篇论文、知识蒸馏）
+- [x] 训练结果备份到 GitHub（所有 LoRA + predictions + 日志）
+
+### 收获
+- **确定了三项目组合的战略叙事**：项目1证明工程能力→项目2证明方法迁移→项目3证明 research taste，递进关系自然
+- **PRM 项目代码一次性写完**：annotate(API标注)→train(1.5B+回归头)→reward(接入GRPO)→eval(对比分析)+两个前沿实验(MC rollout对比、calibration分析)
+- **理解了 API 标注的本质是知识蒸馏**：用 DeepSeek V4 的判断力做 Teacher，训小 PRM 学会过程评分，不是简单的调 API
+- **三篇论文在项目中的定位**：PRM800K=证明了过程监督可行（你的 API 标注替代了人工）、Math-Shepherd=MC rollout 自动标注（你的交叉验证方案）、OmegaPRM=树搜索找最优推理路径（项目3的衔接方向）
+- **简历制作的技术细节**：python-docx + lxml 操作 XML 保留原始样式，`addprevious` 的插入顺序问题搞清楚了
+- **SSH deploy key 机制**：repo-specific deploy key vs 账号级 SSH key 的区别，为 PRM 单独生成了 ed25519 key
+- **训练结果全部备份到 GitHub**：7个 LoRA checkpoint（~287MB）+ 所有 predictions + 日志，再也不会丢了
+
+### 遇到的问题
+- PRM 代码推送到单独仓库时遇到 deploy key 权限问题 → 单独生成 `id_ed25519_prm` key 并配置 SSH config Host alias
+- 简历 docx 项目顺序反复搞反 → `addprevious` 会立即插入到 ref 之前，先插入的离 ref 远，要按自然顺序插入
+- 嵌套 git repo（prm/.git）导致 push 到了错误远程 → 清理嵌套 .git，sft_project 统一管理
+
+### 明天要做
+- [ ] 夏令营（全天，暂停项目）
+
+---
+
+## 2026-07-05（周六）
+
+### 今日计划
+- [x] PRM Part 1 技术细节：生成推理链（为什么 GRPO_200、T=0.8、batch=8）
+- [x] PRM Part 2 技术细节：API 标注（为什么给前文、强制 JSON、连续值、exponential backoff）
+- [x] PRM Part 3 技术细节：PRM 训练（为什么 1.5B、回归头 vs 生成式、last token hidden state、MSE vs ranking loss）
+- [x] Part 3 模拟面试（3题：大 PRM 更好吗、last token 验证、Sigmoid 饱和）
+- [x] PRM Part 4 技术细节：接入 GRPO（merge_and_unload、拆分一致性、权重设计、变量控制）
+- [x] DeepSeek API 性价比分析
+- [x] 学习日志更新
+
+### 收获
+- **生成推理链的参数选择都有因果逻辑**：GRPO_200（甜蜜点，未被 hacking 污染）+ T=0.8（平衡质量和多样性）+ batch=8（KV cache 显存约束）
+- **API 打分的四个设计细节**：给前文（判断逻辑连贯性）、强制 JSON+retry（容错）、连续值（GRPO 需要细粒度梯度）、0.3s 间隔（rate limit）
+- **回归头设计的完整论证链**：生成式（不稳定/慢/解析脆弱）→ 回归头（稳定/快/输出严格约束）+ last token hidden state（causal LM 的免费语义表示）+ MSE（保留距离信息）
+- **面试中会追问的细节**：Sigmoid 饱和时用标签重映射而非改输出层、验证 last token 表示可以用不同位置 hidden state 的 MAE ablation
+- **PRM 接入 GRPO 的变量控制**：只改过程评分来源（规则 vs PRM）和对应权重，其余全部不变——干净的因果推断
+- **权重 0.7/0.2/0.1 不是随便设的**：PRM(0.7) 替代规则 completeness 的角色、accuracy(0.2) 从主角变兜底防假阳性、efficiency(0.1) 不变
+
+### 遇到的问题
+- AutoDL 实例仍被占用，无法跑 GPU 实验 → 继续理论学习 + 面试模拟，不浪费时间等
+
+### 明天要做
+- [ ] PRM Part 5 技术细节（对比评估）
+- [ ] Part 4+5 模拟面试
+- [ ] 前沿实验 1+2 技术细节
+- [ ] 检查 GPU 是否空出，如果空出立即跑实验
+
