@@ -1,0 +1,28 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+设备: cuda:0
+可用显存: 31.4GB
+加载 tokenizer...
+加载模型（先 CPU 后 GPU）...
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:  18%|█▊        | 72/399 [00:00<00:00, 688.29it/s]Loading weights:  35%|███▌      | 141/399 [00:00<00:00, 502.41it/s]Loading weights:  49%|████▉     | 195/399 [00:00<00:00, 462.34it/s]Loading weights:  61%|██████▏   | 245/399 [00:00<00:00, 466.61it/s]Loading weights:  73%|███████▎  | 293/399 [00:00<00:00, 423.06it/s]Loading weights:  87%|████████▋ | 347/399 [00:00<00:00, 450.24it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 479.42it/s]
+  模型加载后显存: 0.0GB（应为 0，模型在 CPU）
+trainable params: 7,667,712 || all params: 8,198,403,072 || trainable%: 0.0935
+  移到 GPU 后显存: 15.3GB / 31.4GB
+加载数据...
+  数据加载完成: 25704 条
+  限制训练样本: 100 条
+
+训练配置:
+  模型: /root/autodl-tmp/model_cache/Qwen/Qwen3-8B
+  总数据: 100 条
+  batch: 1, grad_accum: 8, 等效 batch: 8
+  max_length: 2048
+  seed: 42
+  max_updates: 未设置
+  max_samples: 100
+  总更新步数: 13
+
+Epoch 1/1
+  update 10 | loss 0.8396 | lr 4.62e-05
+Epoch 1 完成 | avg loss: 0.8226 | checkpoint: output/sft_clean_repair_smoke/epoch_1
+
+SFT 训练完成! 模型保存到 output/sft_clean_repair_smoke/final
