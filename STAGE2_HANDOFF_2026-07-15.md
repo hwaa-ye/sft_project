@@ -55,6 +55,19 @@ tar -tzf stage2_essential.tar.gz >/dev/null
 
 SHA256 必须与目录中的 `SHA256SUMS` 一致，然后才解压。
 
+## GitHub 完整恢复点
+
+- commit：`79dd4cf015aacf6d48b4ef04956c67d8975bba2b`
+- tag：`stage2-expanded-complete-2026-07-15`
+- Stage1 adapter：`output/clean_sft_res/sft_clean_repair_v1/final`
+- Expanded adapter：`output/stage2_expanded_experiment/final`
+- 最终训练数据：`data/stage2_expanded/experiment_hard_replay.jsonl`
+- teacher accepted：`data/hard_stage2_deepseek_v2_1156_min128/accepted.jsonl`
+- 原始评测输出：`output/stage2_expanded_eval/{hard,mixed}.jsonl`
+
+已逐项比较 AutoDL 与本地 SHA256：Expanded adapter、最终训练 JSONL、
+teacher accepted、hard predictions、mixed predictions 均完全一致。
+
 ## 不应提交到普通 Git 的内容
 
 - `adapter_model.safetensors`
