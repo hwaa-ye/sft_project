@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "policy": "conservative_answer_repair_from_intermediate_answer_balanced_box_only",
+  "inputs": {
+    "data/clean_sft_repair_2048/train.jsonl": "601ed0292da265793f1577ba1c84b3f8c1fa8b805952f4384cdaeac5f005ea4f",
+    "data/train_math.jsonl": "e3d887d8faabcfd8539c270d9f06bba40c09011dca2288218eaa91b8b1d11bd4",
+    "data/train_math_r1.jsonl": "217775ceaafb30d7a46a042a3c587df7e20c599cafe2ff696ee9e4e3ea778843"
+  },
+  "tokenizer": "/Users/yeouhan/.cache/modelscope/hub/models/Qwen/Qwen3-8B",
+  "max_length": 2048,
+  "counts": {
+    "intermediate_records": 40599,
+    "clean_input": 26474,
+    "accepted": 25771,
+    "no_balanced_box_in_intermediate_answer": 699,
+    "repaired_too_long": 4
+  },
+  "sources": {
+    "EduChat-Math": {
+      "input": 12725,
+      "accepted": 12235,
+      "no_balanced_box_in_intermediate_answer": 486,
+      "repaired_too_long": 4
+    },
+    "Haijian/Advanced-Math": {
+      "input": 195,
+      "accepted": 186,
+      "no_balanced_box_in_intermediate_answer": 9
+    },
+    "amc_aime": {
+      "input": 882,
+      "accepted": 882
+    },
+    "gavinluo/applied_math": {
+      "input": 5908,
+      "accepted": 5811,
+      "no_balanced_box_in_intermediate_answer": 97
+    },
+    "meta-math/GSM8K_zh": {
+      "input": 6764,
+      "accepted": 6657,
+      "no_balanced_box_in_intermediate_answer": 107
+    }
+  },
+  "outputs": {
+    "train": "data/clean_sft_repair_v2_2048/train.jsonl",
+    "rejected": "data/clean_sft_repair_v2_2048/rejected.jsonl"
+  }
+}

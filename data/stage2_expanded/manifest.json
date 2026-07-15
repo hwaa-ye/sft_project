@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "seed": 20260715,
+  "policy": "pilot_plus_new_verified_failures_with_source_balanced_clean_replay",
+  "inputs": {
+    "pilot_hard": "data/stage2_pilot/hard_final.jsonl",
+    "new_queue": "data/hard_stage2_teacher_queue_v2_failures.jsonl",
+    "new_synthesis_dir": "data/hard_stage2_deepseek_v2_1156_min128",
+    "clean": "data/clean_sft_repair_final_2048/train.jsonl",
+    "eval": [
+      "data/eval_mixed_484.jsonl",
+      "data/hard_stage2_candidates/hard_validation.jsonl"
+    ]
+  },
+  "finalize": {
+    "pilot_input": 183,
+    "new_accepted_input": 766,
+    "new_permanent_rejected": 379,
+    "new_unresolved_unique": 11,
+    "new_rejected_after_finalize": 2,
+    "final_hard": {
+      "samples": 947,
+      "full_tokens": 453785,
+      "supervised_tokens": 319489,
+      "sources": {
+        "amc_aime": 368,
+        "EduChat-Math": 456,
+        "Haijian/Advanced-Math": 18,
+        "meta-math/GSM8K_zh": 82,
+        "gavinluo/applied_math": 23
+      },
+      "roles": {
+        "hard": 947
+      },
+      "provenance": {
+        "pilot_hard": 183,
+        "expanded_teacher": 764
+      }
+    },
+    "failure_types": {
+      "truncated": 398,
+      "wrong_complete": 549
+    },
+    "reject_reasons": {
+      "near_eval_duplicate": 2
+    }
+  },
+  "mixture": {
+    "requested_hard_supervised_token_fraction": 0.2,
+    "actual_hard_supervised_token_fraction": 0.19978988509341045,
+    "experiment": {
+      "samples": 2502,
+      "full_tokens": 1836751,
+      "supervised_tokens": 1599125,
+      "sources": {
+        "gavinluo/applied_math": 381,
+        "meta-math/GSM8K_zh": 488,
+        "amc_aime": 424,
+        "EduChat-Math": 1182,
+        "Haijian/Advanced-Math": 27
+      },
+      "roles": {
+        "clean_replay": 1555,
+        "hard": 947
+      },
+      "provenance": {
+        "clean_replay_pool": 1555,
+        "expanded_teacher": 764,
+        "pilot_hard": 183
+      }
+    },
+    "control": {
+      "samples": 2502,
+      "full_tokens": 1750367,
+      "supervised_tokens": 1599125,
+      "sources": {
+        "EduChat-Math": 1294,
+        "meta-math/GSM8K_zh": 654,
+        "gavinluo/applied_math": 487,
+        "amc_aime": 49,
+        "Haijian/Advanced-Math": 18
+      },
+      "roles": {
+        "control_replay": 2502
+      },
+      "provenance": {
+        "expanded_control": 2502
+      }
+    },
+    "sample_count_match": true,
+    "supervised_token_difference": 0
+  },
+  "outputs": {
+    "hard": "data/stage2_expanded/hard_final.jsonl",
+    "rejected": "data/stage2_expanded/hard_rejected.jsonl",
+    "unresolved": "data/stage2_expanded/unresolved.jsonl",
+    "experiment": "data/stage2_expanded/experiment_hard_replay.jsonl",
+    "control": "data/stage2_expanded/control_replay_only.jsonl",
+    "manifest": "data/stage2_expanded/manifest.json"
+  }
+}

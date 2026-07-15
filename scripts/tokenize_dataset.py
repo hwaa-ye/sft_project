@@ -18,6 +18,7 @@ if "MODELSCOPE_CACHE" not in os.environ:
     os.environ.setdefault("MS_CACHE_HOME", _cache_dir)
 
 from modelscope import AutoTokenizer
+from sft_data_utils import format_sft, instruction_prefix
 
 # ─── 1. 加载 tokenizer ───
 print("加载 Qwen3 tokenizer...")
@@ -29,41 +30,6 @@ if tokenizer.pad_token is None:
 MAX_LENGTH = int(os.environ.get("SFT_MAX_LENGTH", "2048"))  # 推理链需要更长
 DATA_PATH = os.environ.get("SFT_TRAIN_JSONL", "data/train_math_all.jsonl")
 tokenized_dir = os.environ.get("SFT_TOKENIZED_DIR", "data/tokenized")
-
-# ─── 2. 格式化函数 ───
-def format_math_sft(example):
-    """
-    数学推理 SFT 格式（Qwen3 ChatML + think/answer 标签）
-    example 包含: instruction（题目）, reasoning（推理过程）, answer（最终答案）
-    """
-    instruction = example["instruction"]
-    reasoning = example.get("reasoning", "")
-    answer = example.get("answer", "")
-
-    response = f"<think>\n{reasoning}\n</think>\n\n<answer>\n{answer}\n</answer>"
-
-    text = (
-        f"<|im_start|>user\n{instruction}<|im_end|>\n"
-        f"<|im_start|>assistant\n{response}<|im_end|>"
-    )
-    return text
-
-def format_generic_sft(example):
-    """通用 SFT 格式（兼容旧数据：input/target 字段）"""
-    instruction = example.get("instruction") or example.get("input", "")
-    target = example.get("target", "")
-
-    # 如果 target 已经包含 think/answer 标签，直接用
-    if "<think>" in target:
-        response = target
-    else:
-        response = f"<think>\n{target}\n</think>"
-
-    text = (
-        f"<|im_start|>user\n{instruction}<|im_end|>\n"
-        f"<|im_start|>assistant\n{response}<|im_end|>"
-    )
-    return text
 
 # ─── 3. 逐条 tokenize ───
 print(f"读取数据并 tokenize（max_length={MAX_LENGTH}）...")
@@ -80,28 +46,27 @@ with open(DATA_PATH, encoding="utf-8") as f:
             continue
         example = json.loads(line)
 
-        # 自动选择格式化函数
-        if "reasoning" in example and "answer" in example:
-            text = format_math_sft(example)
-        else:
-            text = format_generic_sft(example)
+        text = format_sft(example)
 
         tokens = tokenizer(
             text,
             add_special_tokens=False,
-            max_length=MAX_LENGTH,
-            truncation=True,
+            truncation=False,
             return_tensors=None,
         )
         input_ids = tokens["input_ids"]
+        if len(input_ids) > MAX_LENGTH:
+            raise ValueError(
+                f"line {i + 1}: {len(input_ids)} tokens exceeds MAX_LENGTH={MAX_LENGTH}; "
+                "build/use clean SFT-repair data instead of truncating targets"
+            )
 
         # 构造 labels：mask 掉 instruction 部分
-        instruction_text = f"<|im_start|>user\n{example.get('instruction', example.get('input', ''))}<|im_end|>\n<|im_start|>assistant\n"
+        instruction_text = instruction_prefix(example)
         instruction_tokens = tokenizer(
             instruction_text,
             add_special_tokens=False,
-            max_length=MAX_LENGTH,
-            truncation=True,
+            truncation=False,
             return_tensors=None,
         )
         instruction_len = len(instruction_tokens["input_ids"])

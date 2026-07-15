@@ -9,3 +9,11 @@ data/raw.jsonl
 data/train.jsonl
 data/firefly_raw/
 data/train_math*.jsonl
+
+# Generated SFT/GRPO artifacts: keep manifests and small reports in Git, but
+# archive full datasets, predictions, token caches, and weights outside Git.
+data/**/*.jsonl
+data/**/*.npy
+data/**/*.pkl
+data/**/*.pt
+*.safetensors

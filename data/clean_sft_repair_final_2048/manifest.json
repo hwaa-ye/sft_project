@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "policy": "reject_any_exact_mismatch_between_answer_and_last_nonempty_reasoning_box",
+  "input": "data/clean_sft_repair_v2_2048/train.jsonl",
+  "counts": {
+    "input": 25771,
+    "accepted": 25704,
+    "reasoning_answer_exact_mismatch": 67
+  },
+  "outputs": {
+    "train": "data/clean_sft_repair_final_2048/train.jsonl",
+    "rejected": "data/clean_sft_repair_final_2048/rejected.jsonl"
+  }
+}

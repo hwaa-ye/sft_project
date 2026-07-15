@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "policy": "reliable_answer_long_samples_eval_deduplicated",
+  "near_duplicate_threshold": 0.85,
+  "counts": {
+    "too_long_input": 7125,
+    "near_eval_duplicate": 33,
+    "unsupported_control_character": 6,
+    "no_reliable_answer": 211,
+    "exact_eval_duplicate": 48,
+    "internal_duplicate": 138,
+    "duplicate_conflicting_answers": 26,
+    "deduplicated_eligible": 6663,
+    "train_candidates": 6163,
+    "hard_validation": 500
+  },
+  "validation_strata": {
+    "EduChat-Math|2049-4096": 165,
+    "EduChat-Math|4097-8192": 72,
+    "EduChat-Math|>8192": 20,
+    "Haijian/Advanced-Math|2049-4096": 2,
+    "Haijian/Advanced-Math|4097-8192": 0,
+    "Haijian/Advanced-Math|>8192": 0,
+    "amc_aime|2049-4096": 70,
+    "amc_aime|4097-8192": 55,
+    "amc_aime|>8192": 37,
+    "gavinluo/applied_math|2049-4096": 13,
+    "gavinluo/applied_math|4097-8192": 6,
+    "gavinluo/applied_math|>8192": 0,
+    "meta-math/GSM8K_zh|2049-4096": 38,
+    "meta-math/GSM8K_zh|4097-8192": 19,
+    "meta-math/GSM8K_zh|>8192": 3
+  },
+  "outputs": {
+    "train_candidates": "data/hard_stage2_candidates/train_candidates.jsonl",
+    "hard_validation": "data/hard_stage2_candidates/hard_validation.jsonl",
+    "rejected": "data/hard_stage2_candidates/rejected.jsonl"
+  }
+}

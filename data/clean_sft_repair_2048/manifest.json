@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "policy": "keep_complete_examples_only_no_truncation",
+  "input": "data/train_math_all.jsonl",
+  "input_sha256": "6527efb4e16bb8b9abf4ecbe127a8c2879294796bbfb38e61c4dc7f91a04de5d",
+  "tokenizer": "/Users/yeouhan/.cache/modelscope/hub/models/Qwen/Qwen3-8B",
+  "max_length": 2048,
+  "format": "Qwen3 ChatML with complete think and answer blocks",
+  "counts": {
+    "input_lines": 40599,
+    "kept": 26474,
+    "too_long": 7125,
+    "missing_required_text": 7000
+  },
+  "length_buckets": {
+    "1025_to_max": 7667,
+    "max_to_4096": 4046,
+    "gt_4096": 3079,
+    "le_1024": 18807
+  },
+  "sources": {
+    "EduChat-Math": {
+      "seen_valid": 16398,
+      "kept": 12725,
+      "rejected_too_long": 3673,
+      "rejected_missing_required_text": 3331,
+      "token_min": 177,
+      "token_p50": 1015,
+      "token_p95": 5225,
+      "token_max": 25738
+    },
+    "Haijian/Advanced-Math": {
+      "seen_valid": 235,
+      "kept": 195,
+      "rejected_too_long": 40,
+      "rejected_missing_required_text": 335,
+      "token_min": 296,
+      "token_p50": 1119,
+      "token_p95": 3223,
+      "token_max": 8925
+    },
+    "amc_aime": {
+      "seen_valid": 3181,
+      "kept": 882,
+      "rejected_too_long": 2299,
+      "rejected_missing_required_text": 851,
+      "token_min": 597,
+      "token_p50": 3333,
+      "token_p95": 12408,
+      "token_max": 25087
+    },
+    "gavinluo/applied_math": {
+      "seen_valid": 6190,
+      "kept": 5908,
+      "rejected_too_long": 282,
+      "rejected_missing_required_text": 1303,
+      "token_min": 275,
+      "token_p50": 770,
+      "token_p95": 1888,
+      "token_max": 9028
+    },
+    "meta-math/GSM8K_zh": {
+      "seen_valid": 7595,
+      "kept": 6764,
+      "rejected_too_long": 831,
+      "rejected_missing_required_text": 1180,
+      "token_min": 227,
+      "token_p50": 776,
+      "token_p95": 3661,
+      "token_max": 14810
+    }
+  },
+  "outputs": {
+    "train": "data/clean_sft_repair_2048/train.jsonl",
+    "rejected": "data/clean_sft_repair_2048/rejected.jsonl"
+  }
+}

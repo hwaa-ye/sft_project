@@ -2,7 +2,7 @@
 SFT 训练脚本：Qwen3-8B + LoRA（5090 32GB 优化版）
 Phase 1: 数学推理链冷启动 SFT → 产出 SFT 模型 → 接 Phase 2 GRPO
 """
-import os, gc, pickle, torch
+import os, gc, pickle, random, torch
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -28,10 +28,14 @@ BATCH_SIZE = int(os.environ.get("SFT_BATCH_SIZE", "1"))
 GRAD_ACCUM = int(os.environ.get("SFT_GRAD_ACCUM", "8"))
 LR = float(os.environ.get("SFT_LR", "2e-4"))
 EPOCHS = int(os.environ.get("SFT_EPOCHS", "3"))
+SEED = int(os.environ.get("SFT_SEED", "42"))
+MAX_UPDATES = int(os.environ.get("SFT_MAX_UPDATES", "0"))
+MAX_SAMPLES = int(os.environ.get("SFT_MAX_SAMPLES", "0"))
 MAX_GRAD_NORM = float(os.environ.get("SFT_MAX_GRAD_NORM", "1.0"))
 MAX_LENGTH = int(os.environ.get("SFT_MAX_LENGTH", "2048"))  # 推理链需要更长
 DATA_DIR = os.environ.get("SFT_DATA_DIR", "data/tokenized")
 OUTPUT_DIR = os.environ.get("SFT_OUTPUT_DIR", "output/sft_qwen3")
+INIT_LORA = os.environ.get("SFT_INIT_LORA", "").strip()
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 device = torch.device("cuda:0")
@@ -94,12 +98,13 @@ def collate_fn(batch):
     }
 
 # ─── 训练循环 ───
-def train_one_epoch(model, dataloader, optimizer, scheduler, scaler,
+def train_one_epoch(model, dataloader, optimizer, scheduler, scaler, global_update,
                     grad_accum_steps=GRAD_ACCUM, max_grad_norm=MAX_GRAD_NORM, log_every=10):
     model.train()
     epoch_loss = 0.0
     running_loss = 0.0
-    update_count = 0
+    running_micro_batches = 0
+    accum_count = 0
     optimizer.zero_grad(set_to_none=True)
 
     for step, batch in enumerate(dataloader):
@@ -113,7 +118,10 @@ def train_one_epoch(model, dataloader, optimizer, scheduler, scaler,
 
         original_loss = loss.item()
         epoch_loss += original_loss
+        running_loss += original_loss
+        running_micro_batches += 1
         loss = loss / grad_accum_steps
+        accum_count += 1
 
         if scaler is not None:
             scaler.scale(loss).backward()
@@ -121,9 +129,15 @@ def train_one_epoch(model, dataloader, optimizer, scheduler, scaler,
             loss.backward()
         del outputs
 
-        if (step + 1) % grad_accum_steps == 0:
+        should_update = accum_count == grad_accum_steps or step + 1 == len(dataloader)
+        if should_update:
             if scaler is not None:
                 scaler.unscale_(optimizer)
+            if accum_count < grad_accum_steps:
+                correction = grad_accum_steps / accum_count
+                for parameter in model.parameters():
+                    if parameter.grad is not None:
+                        parameter.grad.mul_(correction)
             nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             if scaler is not None:
                 scaler.step(optimizer)
@@ -132,28 +146,40 @@ def train_one_epoch(model, dataloader, optimizer, scheduler, scaler,
                 optimizer.step()
             scheduler.step()
             optimizer.zero_grad(set_to_none=True)
-            running_loss += original_loss
-            update_count += 1
-            if update_count % log_every == 0:
-                avg_loss = running_loss / log_every
+            global_update += 1
+            accum_count = 0
+            if global_update % log_every == 0:
+                avg_loss = running_loss / max(1, running_micro_batches)
                 lr = scheduler.get_last_lr()[0]
-                print(f"  update {update_count} | loss {avg_loss:.4f} | lr {lr:.2e}")
+                print(f"  update {global_update} | loss {avg_loss:.4f} | lr {lr:.2e}")
                 running_loss = 0.0
+                running_micro_batches = 0
+            if global_update % 500 == 0:
+                ckpt = f"{OUTPUT_DIR}/checkpoint_update_{global_update}"
+                model.save_pretrained(ckpt)
+                torch.save({
+                    "global_update": global_update,
+                    "optimizer": optimizer.state_dict(),
+                    "scheduler": scheduler.state_dict(),
+                }, f"{ckpt}/trainer_state.pt")
+                print(f"  checkpoint 保存: {ckpt}")
+            if MAX_UPDATES > 0 and global_update >= MAX_UPDATES:
+                break
 
-        if update_count > 0 and update_count % 500 == 0:
-            ckpt = f"{OUTPUT_DIR}/checkpoint_update_{update_count}"
-            model.save_pretrained(ckpt)
-            print(f"  checkpoint 保存: {ckpt}")
-
-    return epoch_loss / len(dataloader)
+    return epoch_loss / max(1, step + 1), global_update
 
 # ─── 主函数 ───
 def main():
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(SEED)
     gc.collect()
     torch.cuda.empty_cache()
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from peft import LoraConfig, get_peft_model
+    from peft import LoraConfig, PeftModel, get_peft_model
 
     print(f"设备: {device}")
     print(f"可用显存: {torch.cuda.get_device_properties(0).total_memory/1024**3:.1f}GB")
@@ -185,6 +211,12 @@ def main():
     if hasattr(model, "config") and hasattr(model.config, "use_cache"):
         model.config.use_cache = False
 
+    if INIT_LORA:
+        print(f"加载并合并 Stage-1 LoRA: {INIT_LORA}")
+        model = PeftModel.from_pretrained(model, INIT_LORA, is_trainable=False)
+        model = model.merge_and_unload()
+        print("  Stage-1 LoRA 已合并；将为本阶段初始化全新的 LoRA")
+
     print(f"  模型加载后显存: {torch.cuda.memory_allocated()/1024**3:.1f}GB（应为 0，模型在 CPU）")
 
     # 冻结 + LoRA
@@ -208,11 +240,23 @@ def main():
     # 加载数据
     print("加载数据...")
     dataset = SFTDataset(DATA_DIR)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_fn, num_workers=0)
+    if MAX_SAMPLES > 0:
+        dataset.input_ids = dataset.input_ids[:MAX_SAMPLES]
+        dataset.labels = dataset.labels[:MAX_SAMPLES]
+        print(f"  限制训练样本: {len(dataset)} 条")
+    generator = torch.Generator()
+    generator.manual_seed(SEED)
+    dataloader = DataLoader(
+        dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_fn,
+        num_workers=0, generator=generator,
+    )
 
     # 优化器
     optimizer = AdamW(model.parameters(), lr=LR)
-    total_steps = len(dataloader) * EPOCHS // GRAD_ACCUM
+    updates_per_epoch = (len(dataloader) + GRAD_ACCUM - 1) // GRAD_ACCUM
+    total_steps = updates_per_epoch * EPOCHS
+    if MAX_UPDATES > 0:
+        total_steps = min(total_steps, MAX_UPDATES)
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
         num_warmup_steps=int(total_steps * 0.03),
@@ -222,18 +266,28 @@ def main():
 
     print(f"\n训练配置:")
     print(f"  模型: {MODEL_NAME}")
+    print(f"  初始 LoRA: {INIT_LORA or '无（直接从基座）'}")
     print(f"  总数据: {len(dataset)} 条")
     print(f"  batch: {BATCH_SIZE}, grad_accum: {GRAD_ACCUM}, 等效 batch: {BATCH_SIZE * GRAD_ACCUM}")
     print(f"  max_length: {MAX_LENGTH}")
+    print(f"  seed: {SEED}")
+    print(f"  max_updates: {MAX_UPDATES or '未设置'}")
+    print(f"  max_samples: {MAX_SAMPLES or '未设置'}")
     print(f"  总更新步数: {total_steps}")
 
+    global_update = 0
     for epoch in range(EPOCHS):
         print(f"\nEpoch {epoch + 1}/{EPOCHS}")
-        avg_loss = train_one_epoch(model, dataloader, optimizer, scheduler, scaler)
+        avg_loss, global_update = train_one_epoch(
+            model, dataloader, optimizer, scheduler, scaler, global_update
+        )
         ckpt = f"{OUTPUT_DIR}/epoch_{epoch+1}"
         model.save_pretrained(ckpt)
         tokenizer.save_pretrained(ckpt)
         print(f"Epoch {epoch+1} 完成 | avg loss: {avg_loss:.4f} | checkpoint: {ckpt}")
+        if MAX_UPDATES > 0 and global_update >= MAX_UPDATES:
+            print(f"达到 max_updates={MAX_UPDATES}，停止训练")
+            break
 
     final = f"{OUTPUT_DIR}/final"
     model.save_pretrained(final)

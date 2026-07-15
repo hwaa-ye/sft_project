@@ -1,0 +1,21 @@
+{
+  "input": "data/hard_stage2_mining_predictions_v2_2000.jsonl",
+  "input_samples": 2000,
+  "input_must_be_eval_disjoint": true,
+  "classification_counts": {
+    "wrong_complete": 733,
+    "correct_complete": 844,
+    "truncated": 423
+  },
+  "selected": 1156,
+  "selected_by_failure_type": {
+    "truncated": 423,
+    "wrong_complete": 733
+  },
+  "selected_by_source": {
+    "amc_aime": 387,
+    "EduChat-Math": 543,
+    "meta-math/GSM8K_zh": 176,
+    "gavinluo/applied_math": 50
+  }
+}

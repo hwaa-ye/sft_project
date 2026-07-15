@@ -11,7 +11,12 @@ from torch.utils.data import Dataset, DataLoader
 from torch.optim import AdamW
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, PeftModel
-from grpo_reward import compute_reward, extract_answer, check_answer
+# reward 版本可选：v1=grpo_reward（规则），v2=grpo_reward_v2（截断硬约束+激进效率）
+_REWARD_VER = os.environ.get("GRPO_REWARD_VER", "v1")
+if _REWARD_VER == "v2":
+    from grpo_reward_v2 import compute_reward, extract_answer, check_answer
+else:
+    from grpo_reward import compute_reward, extract_answer, check_answer
 
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
@@ -36,9 +41,11 @@ MAX_LENGTH = int(os.environ.get("GRPO_MAX_LENGTH", "1536"))
 GEN_MAX_NEW = int(os.environ.get("GRPO_GEN_MAX_NEW", "2048"))
 GEN_TEMP = float(os.environ.get("GRPO_TEMP", "0.8"))
 # reward 权重（可通过环境变量覆盖，用于 ablation）
-REWARD_W_ACC = float(os.environ.get("GRPO_RW_ACC", "0.7"))
-REWARD_W_COMP = float(os.environ.get("GRPO_RW_COMP", "0.2"))
-REWARD_W_EFF = float(os.environ.get("GRPO_RW_EFF", "0.1"))
+# V2 默认权重 0.6/0.15/0.25，V1 默认 0.7/0.2/0.1
+_DEF_ACC, _DEF_COMP, _DEF_EFF = ("0.6", "0.15", "0.25") if _REWARD_VER == "v2" else ("0.7", "0.2", "0.1")
+REWARD_W_ACC = float(os.environ.get("GRPO_RW_ACC", _DEF_ACC))
+REWARD_W_COMP = float(os.environ.get("GRPO_RW_COMP", _DEF_COMP))
+REWARD_W_EFF = float(os.environ.get("GRPO_RW_EFF", _DEF_EFF))
 
 device = torch.device("cuda:0")
 torch.cuda.empty_cache()

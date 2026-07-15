@@ -1,0 +1,22 @@
+{
+  "input": "data/hard_stage2_mining_predictions_400.jsonl",
+  "input_samples": 400,
+  "input_must_be_eval_disjoint": true,
+  "classification_counts": {
+    "truncated": 241,
+    "correct_complete": 124,
+    "wrong_complete": 35
+  },
+  "selected": 100,
+  "selected_by_failure_type": {
+    "truncated": 65,
+    "wrong_complete": 35
+  },
+  "selected_by_source": {
+    "amc_aime": 22,
+    "Haijian/Advanced-Math": 18,
+    "EduChat-Math": 39,
+    "meta-math/GSM8K_zh": 12,
+    "gavinluo/applied_math": 9
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "seed": 20260713,
+  "policy": "strictly_verified_real_model_failures_plus_token_matched_clean_replay",
+  "inputs": {
+    "queue": "data/hard_stage2_teacher_queue_all_failures_276.jsonl",
+    "synthesis_dir": "data/hard_stage2_deepseek_pro_clipped_calibration_10",
+    "clean": "data/clean_sft_repair_final_2048/train.jsonl",
+    "eval": [
+      "data/test_predictions_v2.jsonl",
+      "data/hard_stage2_candidates/hard_validation.jsonl"
+    ]
+  },
+  "hard_finalize": {
+    "synthesis_accepted_unique": 185,
+    "synthesis_permanent_rejected_unique": 62,
+    "synthesis_unresolved_unique": 29,
+    "accepted": 183,
+    "rejected_after_finalize": 2,
+    "reject_reasons": {
+      "near_eval_duplicate": 2
+    },
+    "failure_types": {
+      "truncated": 160,
+      "wrong_complete": 23
+    }
+  },
+  "mixture": {
+    "requested_hard_supervised_token_fraction": 0.35,
+    "actual_hard_supervised_token_fraction": 0.34903672216882287,
+    "experiment": {
+      "samples": 311,
+      "full_tokens": 200826,
+      "supervised_tokens": 167501,
+      "sources": {
+        "amc_aime": 85,
+        "meta-math/GSM8K_zh": 38,
+        "EduChat-Math": 123,
+        "Haijian/Advanced-Math": 21,
+        "gavinluo/applied_math": 44
+      },
+      "roles": {
+        "hard": 183,
+        "clean_replay": 128
+      }
+    },
+    "control": {
+      "samples": 311,
+      "full_tokens": 184161,
+      "supervised_tokens": 167501,
+      "sources": {
+        "EduChat-Math": 184,
+        "gavinluo/applied_math": 49,
+        "meta-math/GSM8K_zh": 69,
+        "amc_aime": 7,
+        "Haijian/Advanced-Math": 2
+      },
+      "roles": {
+        "control_replay": 311
+      }
+    },
+    "sample_count_match": true,
+    "supervised_token_difference": 0
+  },
+  "outputs": {
+    "hard": "data/stage2_pilot/hard_final.jsonl",
+    "hard_rejected": "data/stage2_pilot/hard_rejected.jsonl",
+    "unresolved": "data/stage2_pilot/unresolved.jsonl",
+    "experiment": "data/stage2_pilot/experiment_hard_replay.jsonl",
+    "control": "data/stage2_pilot/control_replay_only.jsonl",
+    "manifest": "data/stage2_pilot/manifest.json"
+  }
+}
