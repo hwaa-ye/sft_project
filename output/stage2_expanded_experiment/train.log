@@ -1,0 +1,60 @@
+设备: cuda:0
+可用显存: 31.4GB
+加载 tokenizer...
+加载模型（先 CPU 后 GPU）...
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 10271.76it/s]
+加载并合并 Stage-1 LoRA: output/sft_clean_repair_v1/final
+  Stage-1 LoRA 已合并；将为本阶段初始化全新的 LoRA
+  模型加载后显存: 0.0GB（应为 0，模型在 CPU）
+trainable params: 7,667,712 || all params: 8,198,403,072 || trainable%: 0.0935
+  移到 GPU 后显存: 15.3GB / 31.4GB
+加载数据...
+  数据加载完成: 2502 条
+
+训练配置:
+  模型: /root/autodl-tmp/model_cache/Qwen/Qwen3-8B
+  初始 LoRA: output/sft_clean_repair_v1/final
+  总数据: 2502 条
+  batch: 1, grad_accum: 8, 等效 batch: 8
+  max_length: 2048
+  seed: 20260715
+  max_updates: 未设置
+  max_samples: 未设置
+  总更新步数: 313
+
+Epoch 1/1
+  update 10 | loss 0.6441 | lr 4.98e-05
+  update 20 | loss 0.6513 | lr 4.82e-05
+  update 30 | loss 0.6380 | lr 4.65e-05
+  update 40 | loss 0.6447 | lr 4.49e-05
+  update 50 | loss 0.6457 | lr 4.33e-05
+  update 60 | loss 0.6209 | lr 4.16e-05
+  update 70 | loss 0.5942 | lr 4.00e-05
+  update 80 | loss 0.5894 | lr 3.83e-05
+  update 90 | loss 0.5955 | lr 3.67e-05
+  update 100 | loss 0.6071 | lr 3.50e-05
+  update 110 | loss 0.5988 | lr 3.34e-05
+  update 120 | loss 0.6040 | lr 3.17e-05
+  update 130 | loss 0.5861 | lr 3.01e-05
+  update 140 | loss 0.6167 | lr 2.85e-05
+  update 150 | loss 0.6119 | lr 2.68e-05
+  update 160 | loss 0.5963 | lr 2.52e-05
+  update 170 | loss 0.6223 | lr 2.35e-05
+  update 180 | loss 0.5768 | lr 2.19e-05
+  update 190 | loss 0.5739 | lr 2.02e-05
+  update 200 | loss 0.6192 | lr 1.86e-05
+  update 210 | loss 0.6307 | lr 1.69e-05
+  update 220 | loss 0.5754 | lr 1.53e-05
+  update 230 | loss 0.6018 | lr 1.37e-05
+  update 240 | loss 0.5876 | lr 1.20e-05
+  update 250 | loss 0.6296 | lr 1.04e-05
+  update 260 | loss 0.5763 | lr 8.72e-06
+  update 270 | loss 0.5843 | lr 7.07e-06
+  update 280 | loss 0.5440 | lr 5.43e-06
+  update 290 | loss 0.5857 | lr 3.78e-06
+  update 300 | loss 0.6075 | lr 2.14e-06
+  update 310 | loss 0.5907 | lr 4.93e-07
+Epoch 1 完成 | avg loss: 0.6050 | checkpoint: output/stage2_expanded_experiment/epoch_1
+
+SFT 训练完成! 模型保存到 output/stage2_expanded_experiment/final
